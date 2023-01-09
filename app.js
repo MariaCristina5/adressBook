@@ -1,5 +1,5 @@
 //regular expression for validation
-const phoneRegex = /^(\+4|)?(07[0-8]{1}[0-9]{1}|02[0-9]{2}|03[0-9]{2}){1}?(\s|\.|\-)?([0-9]{3}(\s|\.|\-|)){2}$/;
+const phoneRegex = /^[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,6}$/im;
 const strRegex =  /^[a-zA-Z\s]*$/;
 const emailRegex = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
 const digitRegex = /^\d+$/;
@@ -12,11 +12,11 @@ const addBtn = document.getElementById('add-btn');
 const closeBtn = document.getElementById('close-btn');
 const modalBtns = document.getElementById('modal-btns');
 const form = document.getElementById('modal');
-const addrBookList = document.querySelector('#addr-book-list');
+const addrBookList = document.querySelector('#addr-book-list tbody');
 //------------------------------------------//
 let addrName = firstName = lastName = email = phone = streetAddr = postCode = city = country = labels = "";
 //Address class
-class Address{ 
+class Address{
     constructor(id, addrName, firstName, lastName, email, phone, streetAddr, postCode, city, country, labels){
         this.id = id;
         this.addrName = addrName;
@@ -28,12 +28,89 @@ class Address{
         this.postCode = postCode;
         this.city = city;
         this.country = country;
-        this.labels = labels; 
+        this.labels = labels;
     }
+
+    static getAddresses(){
+        // from local storage
+        let addresses;
+        if(localStorage.getItem('addresses') == null){
+            addresses = [];
+        } else {
+            addresses = JSON.parse(localStorage.getItem('addresses'));
+        }
+        return addresses;
+    }
+
+    static addAddress(address){
+        const addresses = Address.getAddresses();
+        addresses.push(address);
+        localStorage.setItem('addresses', JSON.stringify(addresses));
+    }
+
+    static deleteAddress(id) {
+        const addresses = Address.getAddresses();
+        addresses.forEach((address, index) => {
+            if(address.id == id){
+                addresses.splice(index, 1);
+            }
+        })
+        localStorage.setItem('addresses', JSON.stringify(addresses));
+        form.reset();
+        UI.closeModal();
+        addrBookList.innerHTML = "";
+        UI.showAddressList();
+    }
+
 }
 
 //UI class
 class UI {
+    static showAddressList(){
+        const addresses = Address.getAddresses();
+        addresses.forEach(address => UI.addToAddressList(address))
+    }
+    static addToAddressList(address){
+        const tableRow = document.createElement('tr');
+        tableRow.setAttribute('data-id', address.id);
+        tableRow.innerHTML = `
+            <tr>
+            <td>${address.id}</td>
+            <td>
+                <span class="addressing-name">${address.addrName}</span><br><span class="address">${address.streetAddr} ${address.postCode} ${address.city} ${address.country}</span>
+            </td>
+            <td><span>${address.labels}</span></td>
+            <td>${address.firstName + " " + address.lastName}</td>
+            <td>${address.phone}</td>
+        </tr>
+        `;
+        addrBookList.appendChild(tableRow);
+    }
+
+    static showModalData(id){
+        const addresses = Address.getAddresses();
+        addresses.forEach(address => {
+            if(address.id == id) {
+                form.addr_ing_name.value = address.addrName;
+                form.first_name.value = address.firstName;
+                form.last_name.value = address.lastName;
+                form.email.value = address.email;
+                form.phone.value = address.phone;
+                form.street_addr.value = address.streetAddr;
+                form.postal_code.value = address.postCode;
+                form.city.value = address.city;
+                form.country.value = address.country;
+                form.labels.value = address.labels;
+                document.getElementById("modal-title").innerHTML = "Change Address details";
+
+                document.getElementById('modal-btns').innerHTML = `
+                <button type="submit" id="update-btn" data-id = "${id}">Update </button>
+                <button type = "button" id="delete-btn" data-id = "${id}">Delete </button>
+                `;
+            }
+        })
+    }
+
     static showModal(){
         modal.style.display = "block";
         fullscreenDiv.style.display = "block";
@@ -49,6 +126,7 @@ class UI {
 window.addEventListener('DOMContentLoaded', ()=> {
     loadJSON(); //loading country list from json file
     eventListeners();
+    UI.showAddressList();
 })
 
 // event listeners
@@ -59,7 +137,7 @@ function eventListeners(){
         document.getElementById('modal-title').innerHTML = "Add Address";
         UI.showModal();
         document.getElementById('modal-btns').innerHTML = `
-        <button type = "submit" id="save-btn">Save</button>
+        <button type = "submit" id="save-btn"> Save </button>
         `;
     })
 
@@ -78,8 +156,36 @@ function eventListeners(){
                     }, 1500)
                 })
             } else {
-                // let allItem = 
+                let allItem = Address.getAddresses();
+                let lastItemId = (allItem.length > 0) ? allItem[allItem.length-1].id : 0;
+                lastItemId++;
+
+                const addressItem = new Address(lastItemId, addrName, firstName, lastName, email, phone, streetAddr, postCode, city, country, labels);
+                Address.addAddress(addressItem);
+                UI.closeModal();
+                UI.addToAddressList(addressItem);
+                form.reset();
             }
+        }
+    })
+    //table row items
+    addrBookList.addEventListener('click', (event) => {
+        UI.showModal();
+        let trElement;
+        if(event.target.parentElement.tagName == "TD"){
+            trElement = event.target.parentElement.parentElement;
+        }
+
+        if(event.target.parentElement.tagName == "TR"){
+            trElement = event.target.parentElement;
+        }
+        let viewID = trElement.dataset.id;
+        UI.showModalData(viewID);
+    })
+    //delete an address item
+    modalBtns.addEventListener('click', (event) =>{
+        if(event.target.id == 'delete-btn') {
+            Address.deleteAddress(event.target.dataset.id);
         }
     })
 }
@@ -95,7 +201,7 @@ function loadJSON(){
         console.log(data)
         data.forEach(country => {
             html +=`
-            <option>${country.country}</option>
+            <option>${record.country.country}</option>
             `;
         })
         countryList.innerHTML = html;
