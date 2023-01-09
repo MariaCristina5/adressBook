@@ -235,14 +235,14 @@ function eventListeners(){
 
 //load countries list
 function loadJSON(){
-    fetch('https://api.jsonbin.io/v3/b/63b6ddbc15ab31599e2dc746')
+    fetch('https://restcountries.com/v2/all/')
     .then(response => response.json())
     .then(data => {
         let html='';
         console.log(data)
         data.forEach(country => {
             html +=`
-            <option>${record.country.country}</option>
+            <option>${country.name}</option>
             `;
         })
         countryList.innerHTML = html;
