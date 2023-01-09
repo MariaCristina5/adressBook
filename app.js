@@ -62,6 +62,27 @@ class Address{
         UI.showAddressList();
     }
 
+    static updateAdress(item){
+        const addresses = Address.getAddresses();
+        addresses.forEach(address =>{
+            if(address.id == item.id){
+                address.addrName = item.addrName;
+                address.firstName = item.firstName;
+                address.lastName = item.lastName;
+                address.email = item.email;
+                address.phone = item.phone;
+                address.streetAddr = item.streetAddr;
+                address.postCode = item.postCode;
+                address.city = item.city;
+                address.country = item.country;
+                address.labels = item.labels;
+            }
+        })
+        localStorage.setItem('addresses', JSON.stringify(addresses));
+        addrBookList.innerHTML = "";
+        UI.showAddressList();
+    }
+
 }
 
 //UI class
@@ -186,6 +207,26 @@ function eventListeners(){
     modalBtns.addEventListener('click', (event) =>{
         if(event.target.id == 'delete-btn') {
             Address.deleteAddress(event.target.dataset.id);
+        }
+    })
+    //update an adress item
+    modalBtns.addEventListener('click', (event) => {
+        event.preventDefault();
+        if(event.target.id == "update-btn"){
+            let id = event.target.dataset.id;
+            let isFormValid = getFormData();
+            if(!isFormValid){
+                form.querySelectorAll('input').forEach(input =>{
+                    setTimeout(()=>{
+                        input.classList.remove('errorMsg');
+                    }, 1500)
+                })
+            }else{
+                const addressItem = new Address(id, addrName, firstName, lastName, email, phone, streetAddr, postCode, city, country, labels);
+                Address.updateAdress(addressItem);
+                UI.closeModal;
+                form.reset();
+            }
         }
     })
 }
